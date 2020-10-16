@@ -5,8 +5,68 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:RiggsBurnham_PresentationMaker"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Riggs Burnham - Presentation Maker" Height="450" Width="800"
+        Background="#2B2A30">
+    <Window.Resources>
+        <Style TargetType="ScrollBar">
+            <Setter Property="Opacity" Value="0.5"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#2B2A30"></Setter>
+            <Setter Property="BorderBrush" Value="#38363E"></Setter>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="LightGray"></Setter>
+        </Style>
+        <Style TargetType="Border">
+            <Setter Property="Background" Value="#1E1D21"></Setter>
+            <Setter Property="BorderBrush" Value="#38363E"></Setter>
+            <Setter Property="BorderThickness" Value="1"></Setter>
+        </Style>
+    </Window.Resources>
     <Grid>
-        
+        <!-- 8 columns -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Border Grid.Column="0"
+                Margin="5,5,5,5">
+            <Grid Column="0">
+                <!-- 5 rows, 4 columns -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid Margin="20,10,20,10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"></RowDefinition>
+                        <RowDefinition Height="*"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Title"
+                           FontSize="16"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Grid.Row="0">
+                    </TextBlock>
+                    <TextBox Grid.Row="1"
+                         TextAlignment="Center">
+
+                    </TextBox>
+                </Grid>
+                <!--<StackPanel Grid.Column="0"
+                        Grid.Row="0"
+                        Grid.ColumnSpan="4"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Center">
+                <TextBlock Text="This is a test"></TextBlock>
+                <TextBox HorizontalAlignment="Stretch"></TextBox>
+            </StackPanel>-->
+
+            </Grid>
+        </Border>
     </Grid>
 </Window>
