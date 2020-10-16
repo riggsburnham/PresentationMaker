@@ -33,7 +33,7 @@
         <Border Grid.Column="0"
                 Margin="5,5,5,5">
             <Grid Column="0">
-                <!-- 5 rows, 4 columns -->
+                <!-- 5 rows -->
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"></RowDefinition>
                     <RowDefinition Height="*"></RowDefinition>
@@ -41,7 +41,8 @@
                     <RowDefinition Height="*"></RowDefinition>
                     <RowDefinition Height="*"></RowDefinition>
                 </Grid.RowDefinitions>
-                <Grid Margin="20,10,20,10">
+                <Grid Margin="20,10,20,0">
+                    <!-- 2 rows-->
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"></RowDefinition>
                         <RowDefinition Height="*"></RowDefinition>
@@ -52,20 +53,43 @@
                            VerticalAlignment="Center"
                            Grid.Row="0">
                     </TextBlock>
-                    <TextBox Grid.Row="1"
-                         TextAlignment="Center">
+                    <Border Grid.Row="1">
+                        <TextBox TextAlignment="Center"
+                                 VerticalAlignment="Stretch"
+                                 VerticalContentAlignment="Center">
 
-                    </TextBox>
+                        </TextBox>
+                    </Border>
                 </Grid>
-                <!--<StackPanel Grid.Column="0"
-                        Grid.Row="0"
-                        Grid.ColumnSpan="4"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Center">
-                <TextBlock Text="This is a test"></TextBlock>
-                <TextBox HorizontalAlignment="Stretch"></TextBox>
-            </StackPanel>-->
+                <Grid Row="1"
+                      RowSpan="3"
+                      Margin="20,0,20,10">
+                    <!-- 5 rows -->
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"></RowDefinition>
+                        <RowDefinition Height="*"></RowDefinition>
+                        <RowDefinition Height="*"></RowDefinition>
+                        <RowDefinition Height="*"></RowDefinition>
+                        <RowDefinition Height="*"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Description"
+                               FontSize="16"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Grid.Row="0">
+                    </TextBlock>
+                    <Border Grid.Row="1"
+                            Grid.RowSpan="4">
+                        <TextBox TextWrapping="Wrap">
 
+                        </TextBox>
+                    </Border>
+                </Grid>
+                <Button Grid.Row="4"
+                        Height="40"
+                        Width="200">
+                    <TextBlock Text="Create Powerpoint"></TextBlock>
+                </Button>
             </Grid>
         </Border>
     </Grid>

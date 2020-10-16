@@ -20,7 +20,7 @@ namespace RiggsBurnham_PresentationMaker.Views
     /// </summary>
     public partial class PresentationMakerMainWindow : Window
     {
-        public MainWindow()
+        public PresentationMakerMainWindow()
         {
             InitializeComponent();
         }
