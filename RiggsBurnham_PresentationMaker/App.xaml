@@ -2,8 +2,9 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:RiggsBurnham_PresentationMaker"
+             xmlns:viewModels="clr-namespace:RiggsBurnham_PresentationMaker.ViewModels"
              StartupUri="Views/PresentationMakerMainWindow.xaml">
     <Application.Resources>
-         
+         <viewModels:PresentationMakerViewModel x:Key="PresentationMakerViewModel"/>
     </Application.Resources>
 </Application>
