@@ -30,7 +30,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
     public class PresentationMakerViewModel : INotifyPropertyChanged
     {
         #region constants
-        // these constants are for setting up the display area on the slide for where all pictures will go
+        // these constants are for setting up the display area on the slide for where all pictures will go in the powerpoint 
         private const float PICTURE_BOX_TOP = 28.75f;
         private const float PICTURE_BOX_LEFT = 480f;
         private const float PICTURE_BOX_WIDTH = 414f;
@@ -61,7 +61,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         #endregion
         
         #region constructor
-
         public PresentationMakerViewModel()
         {
             GoogleImages = new GoogleImages();
@@ -75,7 +74,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         #endregion
 
         #region properties
-
         public string Title
         {
             get => _title;
@@ -172,9 +170,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         public DelegateCommand SavePowerpointCommand { get; set; }
         private void SavePowerpoint()
         {
-            // TODO: remove this once you are pulling images from google...
-            //string imageTempPath = @"C:\Users\riggs\Pictures\Asuna Closeup.JPG";
-
             SaveFileDialog saveFileDialog = new SaveFileDialog();
             saveFileDialog.Filter = "Powerpoint files (*.pptx)|*.pptx|All files (*.*)|*.*";
 
@@ -219,11 +214,9 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 {
                     case 1:
                         // resize picture to fit inside box while retaining same aspect ratio...
-                        //img = System.Drawing.Image.FromFile(imageTempPath);
                         imgData = new WebClient().DownloadData(ImagePaths[0]);
                         imgStream = new MemoryStream(imgData);
                         img = System.Drawing.Image.FromStream(imgStream);
-                        //dimens = ResizePicture(img.Width, img.Height, 1);
                         dimens = ResizePicture(img.Width, img.Height, false);
                         slide.Shapes.AddPicture(
                             ImagePaths[0], 
@@ -239,11 +232,9 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         runningHeight = 0;
                         for (int i = 0; i < 2; ++i)
                         {
-                            //img = System.Drawing.Image.FromFile(ImagePaths[i]);
                             imgData = new WebClient().DownloadData(ImagePaths[i]);
                             imgStream = new MemoryStream(imgData);
                             img = System.Drawing.Image.FromStream(imgStream);
-                            //dimens = ResizePicture(img.Width, img.Height, 2);
                             dimens = ResizePicture(img.Width, img.Height, true);
                             switch (i)
                             {
@@ -279,11 +270,9 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         runningWidth = 0;
                         for (int i = 0; i < 3; ++i)
                         {
-                            //img = System.Drawing.Image.FromFile(ImagePaths[i]);
                             imgData = new WebClient().DownloadData(ImagePaths[i]);
                             imgStream = new MemoryStream(imgData);
                             img = System.Drawing.Image.FromStream(imgStream);
-                            //dimens = ResizePicture(img.Width, img.Height, 2); // TODO: looks like i should've passed 3 here.. demo was working though
                             dimens = ResizePicture(img.Width, img.Height, true);
                             switch (i)
                             {
@@ -333,11 +322,9 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         runningWidth = 0;
                         for (int i = 0; i < 4; ++i)
                         {
-                            //img = System.Drawing.Image.FromFile(ImagePaths[i]);
                             imgData = new WebClient().DownloadData(ImagePaths[i]);
                             imgStream = new MemoryStream(imgData);
                             img = System.Drawing.Image.FromStream(imgStream);
-                            //dimens = ResizePicture(img.Width, img.Height, 2);
                             dimens = ResizePicture(img.Width, img.Height, true);
                             switch (i)
                             {
@@ -466,7 +453,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         if (newImageHeight < PICTURE_BOX_HEIGHT / gtOnePicture)
                         {
                             imageHeight = newImageHeight;
-                            //imageHeight /= numPictures;
                         }
                         else
                         {
@@ -475,7 +461,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         }
                     }
                     imageWidth *= resize;
-                    //imageWidth /= numPictures;
                 }
                 else
                 {
@@ -487,7 +472,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         if (newImageWidth < (PICTURE_BOX_WIDTH / gtOnePicture))
                         {
                             imageWidth = newImageWidth;
-                            //imageWidth /= numPictures;
                         }
                         else
                         {
@@ -496,7 +480,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         }
                     }
                     imageHeight *= resize;
-                    //imageHeight /= numPictures;
                 }
             }
             return new PictureDimensions() { Height = imageHeight, Width = imageWidth };
