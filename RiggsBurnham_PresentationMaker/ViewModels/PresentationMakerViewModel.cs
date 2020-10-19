@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -13,10 +14,15 @@ using Microsoft.Office.Interop.PowerPoint;
 using Microsoft.Win32;
 using Prism.Commands;
 using System.Drawing;
+using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Windows.Shapes;
 using RiggsBurnham_PresentationMaker.Models;
 using Image = System.Windows.Controls.Image;
+using Google.Apis;
+using GoogleLibrary;
+using ILibrary;
 
 
 namespace RiggsBurnham_PresentationMaker.ViewModels
@@ -35,6 +41,12 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         #region private member variables
         private string _title = "";
         private string _description = "";
+        private GoogleImages _googleImages;
+        private ObservableCollection<IData> _images;
+        private int _mainWindowHeight = 450;
+        private int _mainWindowWidth = 800;
+        private string _selectedImageUrl = "";
+        List<string> _imagePaths;
         #endregion
 
         #region property changed
@@ -47,12 +59,18 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             }
         }
         #endregion
-
+        
         #region constructor
 
         public PresentationMakerViewModel()
         {
+            GoogleImages = new GoogleImages();
+            ImagePaths = new List<string>();
             SavePowerpointCommand = new DelegateCommand(SavePowerpoint);
+            SearchImagesCommand = new DelegateCommand(SearchImages);
+            AddImageCommand = new DelegateCommand(AddImage);
+            SelectedImageChangedCommand = new DelegateCommand<object>(SelectedImageChanged);
+
         }
         #endregion
 
@@ -77,16 +95,85 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 NotifyPropertyChanged();
             }
         }
+
+        public GoogleImages GoogleImages
+        {
+            get => _googleImages;
+            set => _googleImages = value;
+        }
+
+        public ObservableCollection<IData> Images
+        {
+            get => _images;
+            set
+            {
+                _images = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public int MainWindowHeight
+        {
+            get => _mainWindowHeight;
+            set => _mainWindowHeight = value;
+        }
+
+        public int MainWindowWidth
+        {
+            get => _mainWindowWidth;
+            set => _mainWindowWidth = value;
+        }
+
+        public int ImagesWidth
+        {
+            get
+            {
+                // there are two columns, where the images are taking up the second column so, multiple width by .5 to get the width of the images gallery
+                // want to display 2 images on each row so divide that result by 2
+                // take that result and minus 11 for the width of the scrollbar
+                double width = System.Convert.ToDouble(MainWindowWidth);
+                double result = ((.5 * width) / 2) - 11;
+                return System.Convert.ToInt32(result);
+            }
+        }
+
+        public int ImageGalleryWidth
+        {
+            get
+            {
+                double width = System.Convert.ToDouble(MainWindowWidth);
+                double result = .5 * width;
+                return System.Convert.ToInt32(result);
+            }
+        }
+
+        public string SelectedImageUrl
+        {
+            get => _selectedImageUrl;
+            set
+            {
+                _selectedImageUrl = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public List<string> ImagePaths
+        {
+            get => _imagePaths;
+            set
+            {
+                _imagePaths = value;
+                NotifyPropertyChanged();
+            }
+        }
         #endregion
 
         #region commands
         public DelegateCommand SavePowerpointCommand { get; set; }
-
-
         private void SavePowerpoint()
         {
             // TODO: remove this once you are pulling images from google...
-            string imageTempPath = @"C:\Users\riggs\Pictures\Asuna Closeup.JPG";
+            //string imageTempPath = @"C:\Users\riggs\Pictures\Asuna Closeup.JPG";
 
             SaveFileDialog saveFileDialog = new SaveFileDialog();
             saveFileDialog.Filter = "Powerpoint files (*.pptx)|*.pptx|All files (*.*)|*.*";
@@ -119,27 +206,26 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 objText.Font.Name = "Arial";
                 objText.Font.Size = 16;
 
-                // Add Images
-                // TODO: this will be populated with selected images in the future
-                List<string> imagePaths = new List<string>();
-                imagePaths.Add(imageTempPath);
-                imagePaths.Add(imageTempPath);
-                imagePaths.Add(imageTempPath);
-                imagePaths.Add(imageTempPath);
+                
 
                 // will most likely limit number of images on a slide to 4...
                 PictureDimensions dimens = new PictureDimensions();
                 System.Drawing.Image img;
+                byte[] imgData;
+                MemoryStream imgStream;
                 float runningHeight = 0;
                 float runningWidth = 0;
-                switch (imagePaths.Count)
+                switch (ImagePaths.Count)
                 {
                     case 1:
                         // resize picture to fit inside box while retaining same aspect ratio...
-                        img = System.Drawing.Image.FromFile(imageTempPath);
+                        //img = System.Drawing.Image.FromFile(imageTempPath);
+                        imgData = new WebClient().DownloadData(ImagePaths[0]);
+                        imgStream = new MemoryStream(imgData);
+                        img = System.Drawing.Image.FromStream(imgStream);
                         dimens = ResizePicture(img.Width, img.Height, 1);
                         slide.Shapes.AddPicture(
-                            imageTempPath, 
+                            ImagePaths[0], 
                             Microsoft.Office.Core.MsoTriState.msoFalse,
                             Microsoft.Office.Core.MsoTriState.msoTrue, 
                             PICTURE_BOX_LEFT, 
@@ -152,14 +238,17 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         runningHeight = 0;
                         for (int i = 0; i < 2; ++i)
                         {
-                            img = System.Drawing.Image.FromFile(imagePaths[i]);
+                            //img = System.Drawing.Image.FromFile(ImagePaths[i]);
+                            imgData = new WebClient().DownloadData(ImagePaths[i]);
+                            imgStream = new MemoryStream(imgData);
+                            img = System.Drawing.Image.FromStream(imgStream);
                             dimens = ResizePicture(img.Width, img.Height, 2);
                             switch (i)
                             {
                                 case 0:
                                     // first picure will be placed above the second, will use returned values without modifying them
                                     slide.Shapes.AddPicture(
-                                        imageTempPath, 
+                                        ImagePaths[i], 
                                         Microsoft.Office.Core.MsoTriState.msoFalse,
                                         Microsoft.Office.Core.MsoTriState.msoTrue, 
                                         PICTURE_BOX_LEFT, PICTURE_BOX_TOP, 
@@ -171,7 +260,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                                 case 1:
                                     // second picture will be placed below the first, will need to modify the top by the height the the picture before...
                                     slide.Shapes.AddPicture(
-                                        imageTempPath, 
+                                        ImagePaths[i], 
                                         Microsoft.Office.Core.MsoTriState.msoFalse,
                                         Microsoft.Office.Core.MsoTriState.msoTrue, 
                                         PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, 
@@ -188,14 +277,17 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         runningWidth = 0;
                         for (int i = 0; i < 3; ++i)
                         {
-                            img = System.Drawing.Image.FromFile(imagePaths[i]);
-                            dimens = ResizePicture(img.Width, img.Height, 2);
+                            //img = System.Drawing.Image.FromFile(ImagePaths[i]);
+                            imgData = new WebClient().DownloadData(ImagePaths[i]);
+                            imgStream = new MemoryStream(imgData);
+                            img = System.Drawing.Image.FromStream(imgStream);
+                            dimens = ResizePicture(img.Width, img.Height, 2); // TODO: looks like i should've passed 3 here.. demo was working though
                             switch (i)
                             {
                                 case 0:
                                     // first picure will be placed above the second, will use returned values without modifying them
                                     slide.Shapes.AddPicture(
-                                        imageTempPath, 
+                                        ImagePaths[i], 
                                         Microsoft.Office.Core.MsoTriState.msoFalse,
                                         Microsoft.Office.Core.MsoTriState.msoTrue, 
                                         PICTURE_BOX_LEFT, 
@@ -208,7 +300,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                                 case 1:
                                     // second picture will be placed below the first, will need to modify the top by the height the the picture before...
                                     slide.Shapes.AddPicture(
-                                        imageTempPath,
+                                        ImagePaths[i],
                                         Microsoft.Office.Core.MsoTriState.msoFalse,
                                         Microsoft.Office.Core.MsoTriState.msoTrue, 
                                         PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, 
@@ -220,7 +312,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                                 case 2:
                                     // third picture will be placed to the right of the second, will need to modify both top and left by the height and width of previous pic
                                     slide.Shapes.AddPicture(
-                                        imageTempPath, 
+                                        ImagePaths[i], 
                                         Microsoft.Office.Core.MsoTriState.msoFalse,
                                         Microsoft.Office.Core.MsoTriState.msoTrue, 
                                         PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER, 
@@ -238,14 +330,17 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         runningWidth = 0;
                         for (int i = 0; i < 4; ++i)
                         {
-                            img = System.Drawing.Image.FromFile(imagePaths[i]);
+                            //img = System.Drawing.Image.FromFile(ImagePaths[i]);
+                            imgData = new WebClient().DownloadData(ImagePaths[i]);
+                            imgStream = new MemoryStream(imgData);
+                            img = System.Drawing.Image.FromStream(imgStream);
                             dimens = ResizePicture(img.Width, img.Height, 2);
                             switch (i)
                             {
                                 case 0:
                                     // first picure will be placed above the second, will use returned values without modifying them
                                     slide.Shapes.AddPicture(
-                                        imageTempPath, 
+                                        ImagePaths[i], 
                                         Microsoft.Office.Core.MsoTriState.msoFalse,
                                         Microsoft.Office.Core.MsoTriState.msoTrue, 
                                         PICTURE_BOX_LEFT, PICTURE_BOX_TOP, 
@@ -258,7 +353,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                                 case 1:
                                     // second picture will be placed to the right of the first, will add width of first to left value
                                     slide.Shapes.AddPicture(
-                                        imageTempPath, 
+                                        ImagePaths[i], 
                                         Microsoft.Office.Core.MsoTriState.msoFalse,
                                         Microsoft.Office.Core.MsoTriState.msoTrue, 
                                         PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER, 
@@ -272,7 +367,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                                 case 2:
                                     // third picture will be placed below the first, will add height of the first to top value
                                     slide.Shapes.AddPicture(
-                                        imageTempPath, 
+                                        ImagePaths[i], 
                                         Microsoft.Office.Core.MsoTriState.msoFalse,
                                         Microsoft.Office.Core.MsoTriState.msoTrue,
                                         PICTURE_BOX_LEFT, 
@@ -285,7 +380,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                                 case 3:
                                     // fourth picture will be placed below the second, will add width of the third to width, height of the second to top
                                     slide.Shapes.AddPicture(
-                                        imageTempPath, 
+                                        ImagePaths[i], 
                                         Microsoft.Office.Core.MsoTriState.msoFalse,
                                         Microsoft.Office.Core.MsoTriState.msoTrue, 
                                         PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER,
@@ -299,11 +394,42 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         break;
                 }
 
+                int q = 0;
                 // save new powerpoint
                 pptPresentation.SaveAs(saveFileDialog.FileName, PpSaveAsFileType.ppSaveAsDefault, MsoTriState.msoTrue);
             }
         }
 
+        public DelegateCommand SearchImagesCommand { get; set; }
+
+        private void SearchImages()
+        {
+            List<string> titleString = Title.Split(' ').ToList();
+            List<string> descriptionString = Description.Split(' ').ToList();
+            titleString.AddRange(descriptionString);
+            GoogleImages.SearchGoogleImages(titleString);
+            Images = LoadGoogleImages();
+        }
+
+        public DelegateCommand AddImageCommand { get; set; }
+
+        private void AddImage()
+        {
+            if (SelectedImageUrl == "") return;
+            ImagePaths.Add(SelectedImageUrl);
+        }
+
+        public DelegateCommand<object> SelectedImageChangedCommand { get; set; }
+
+        private void SelectedImageChanged(object selectedItem)
+        {
+            IData img = selectedItem as IData;
+            if (img == null) return;
+            SelectedImageUrl = img.URL;
+        }
+        #endregion
+
+        #region private functions
         /// <summary>
         /// Pass the width, height, number of pictures to this function in order to resize
         /// </summary>
@@ -330,7 +456,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                     while (PICTURE_BOX_HEIGHT < imageHeight)
                     {
                         newImageHeight = imageHeight * resize;
-                        if (imageHeight < PICTURE_BOX_HEIGHT)
+                        if (newImageHeight < PICTURE_BOX_HEIGHT)
                         {
                             imageHeight = newImageHeight;
                             imageHeight /= numPictures;
@@ -366,7 +492,20 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                     imageHeight /= numPictures;
                 }
             }
-            return new PictureDimensions(){Height = imageHeight, Width = imageWidth};
+            return new PictureDimensions() { Height = imageHeight, Width = imageWidth };
+        }
+
+        private ObservableCollection<IData> LoadGoogleImages()
+        {
+            ObservableCollection<IData> images = new ObservableCollection<IData>();
+            foreach (Item item in _googleImages.GData.items)
+            {
+                foreach (Cse_Image img in item.pagemap.cse_image)
+                {
+                    images.Add(img);
+                }
+            }
+            return images;
         }
         #endregion
     }

@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:RiggsBurnham_PresentationMaker"
+        xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
         mc:Ignorable="d"
         Title="Riggs Burnham - Presentation Maker" Height="450" Width="800"
         Background="#2B2A30"
@@ -87,13 +88,80 @@
                         </TextBox>
                     </Border>
                 </Grid>
-                <Button Grid.Row="4"
-                        Height="40"
-                        Width="200"
-                        Command="{Binding SavePowerpointCommand}">
-                    <TextBlock Text="Create Powerpoint"></TextBlock>
-                </Button>
+
+                <Grid Grid.Row="4"
+                      Margin="20,0,20,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"></ColumnDefinition>
+                        <ColumnDefinition Width="*"></ColumnDefinition>
+                        <ColumnDefinition Width="*"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0"
+                            Height ="40"
+                            Margin="0,0,5,0"
+                            Command="{Binding SearchImagesCommand}">
+                        <TextBlock Text="Search Images"></TextBlock>
+                    </Button>
+                    <Button Grid.Column="1"
+                            Height ="40"
+                            Margin="5,0,5,0"
+                            Command="{Binding AddImageCommand}">
+                        <TextBlock Text="Add Image"></TextBlock>
+                    </Button>
+                    <Button Grid.Column="2"
+                            Height ="40"
+                            Margin="5,0,0,0"
+                            Command="{Binding SavePowerpointCommand}">
+                        <TextBlock Text="Export Powerpoint"></TextBlock>
+                    </Button>
+                </Grid>
             </Grid>
+        </Border>
+        <Border Grid.Column="1"
+                Margin="5,5,5,5">
+            <DockPanel>
+                <TextBlock Text="Images"
+                           HorizontalAlignment="Stretch"
+                           TextAlignment="Center"
+                           VerticalAlignment="Top"
+                           DockPanel.Dock="Top">
+                </TextBlock>
+                <Grid>
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  BorderThickness="0">
+                        <ListBox ItemsSource="{Binding Images}"
+                                 Background="#1E1D21"
+                                 HorizontalContentAlignment="Center"
+                                 VerticalContentAlignment="Center"
+                                 BorderThickness="0"
+                                 x:Name="ImagesLB">
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="SelectionChanged">
+                                    <i:InvokeCommandAction
+                                        Command="{Binding SelectedImageChangedCommand}"
+                                        CommandParameter="{Binding ElementName=ImagesLB, Path=SelectedItem}">
+                                    </i:InvokeCommandAction>
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel ItemWidth="{Binding ImagesWidth}"
+                                               ItemHeight="{Binding ImagesWidth}"
+                                               Width="{Binding ImageGalleryWidth}"></WrapPanel>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#2B2A30"
+                                            BorderBrush="#38363E">
+                                        <Image Source="{Binding URL}"></Image>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
+                </Grid>
+            </DockPanel>
         </Border>
     </Grid>
 </Window>
