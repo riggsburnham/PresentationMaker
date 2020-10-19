@@ -223,7 +223,8 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         imgData = new WebClient().DownloadData(ImagePaths[0]);
                         imgStream = new MemoryStream(imgData);
                         img = System.Drawing.Image.FromStream(imgStream);
-                        dimens = ResizePicture(img.Width, img.Height, 1);
+                        //dimens = ResizePicture(img.Width, img.Height, 1);
+                        dimens = ResizePicture(img.Width, img.Height, false);
                         slide.Shapes.AddPicture(
                             ImagePaths[0], 
                             Microsoft.Office.Core.MsoTriState.msoFalse,
@@ -242,7 +243,8 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                             imgData = new WebClient().DownloadData(ImagePaths[i]);
                             imgStream = new MemoryStream(imgData);
                             img = System.Drawing.Image.FromStream(imgStream);
-                            dimens = ResizePicture(img.Width, img.Height, 2);
+                            //dimens = ResizePicture(img.Width, img.Height, 2);
+                            dimens = ResizePicture(img.Width, img.Height, true);
                             switch (i)
                             {
                                 case 0:
@@ -281,7 +283,8 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                             imgData = new WebClient().DownloadData(ImagePaths[i]);
                             imgStream = new MemoryStream(imgData);
                             img = System.Drawing.Image.FromStream(imgStream);
-                            dimens = ResizePicture(img.Width, img.Height, 2); // TODO: looks like i should've passed 3 here.. demo was working though
+                            //dimens = ResizePicture(img.Width, img.Height, 2); // TODO: looks like i should've passed 3 here.. demo was working though
+                            dimens = ResizePicture(img.Width, img.Height, true);
                             switch (i)
                             {
                                 case 0:
@@ -334,7 +337,8 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                             imgData = new WebClient().DownloadData(ImagePaths[i]);
                             imgStream = new MemoryStream(imgData);
                             img = System.Drawing.Image.FromStream(imgStream);
-                            dimens = ResizePicture(img.Width, img.Height, 2);
+                            //dimens = ResizePicture(img.Width, img.Height, 2);
+                            dimens = ResizePicture(img.Width, img.Height, true);
                             switch (i)
                             {
                                 case 0:
@@ -393,8 +397,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         }
                         break;
                 }
-
-                int q = 0;
                 // save new powerpoint
                 pptPresentation.SaveAs(saveFileDialog.FileName, PpSaveAsFileType.ppSaveAsDefault, MsoTriState.msoTrue);
             }
@@ -440,9 +442,14 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         /// <returns>
         /// a class that holds the new size
         /// </returns>
-        private PictureDimensions ResizePicture(double imageWidth, double imageHeight, int numPictures)
+        private PictureDimensions ResizePicture(double imageWidth, double imageHeight, bool moreThanOnePicture)
         {
-            if (imageHeight > PICTURE_BOX_HEIGHT || imageWidth > PICTURE_BOX_WIDTH)
+            int gtOnePicture = 1;
+            if (moreThanOnePicture == true)
+            {
+                gtOnePicture = 2;
+            }
+            if (imageHeight > (PICTURE_BOX_HEIGHT / gtOnePicture) || imageWidth > (PICTURE_BOX_WIDTH / gtOnePicture))
             {
                 double resize = 0.9;
                 double heightDifference = imageHeight - PICTURE_BOX_HEIGHT;
@@ -453,13 +460,13 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 {
                     // modify the height first then use same resize on the width
                     double newImageHeight = 0;
-                    while (PICTURE_BOX_HEIGHT < imageHeight)
+                    while ((PICTURE_BOX_HEIGHT / gtOnePicture) < imageHeight)
                     {
                         newImageHeight = imageHeight * resize;
-                        if (newImageHeight < PICTURE_BOX_HEIGHT)
+                        if (newImageHeight < PICTURE_BOX_HEIGHT / gtOnePicture)
                         {
                             imageHeight = newImageHeight;
-                            imageHeight /= numPictures;
+                            //imageHeight /= numPictures;
                         }
                         else
                         {
@@ -468,19 +475,19 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         }
                     }
                     imageWidth *= resize;
-                    imageWidth /= numPictures;
+                    //imageWidth /= numPictures;
                 }
                 else
                 {
                     // modify the width first then use same resize on the height
                     double newImageWidth = 0;
-                    while (PICTURE_BOX_WIDTH < imageWidth)
+                    while ((PICTURE_BOX_WIDTH / gtOnePicture) < imageWidth)
                     {
                         newImageWidth = imageWidth * resize;
-                        if (newImageWidth < PICTURE_BOX_WIDTH)
+                        if (newImageWidth < (PICTURE_BOX_WIDTH / gtOnePicture))
                         {
                             imageWidth = newImageWidth;
-                            imageWidth /= numPictures;
+                            //imageWidth /= numPictures;
                         }
                         else
                         {
@@ -489,7 +496,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         }
                     }
                     imageHeight *= resize;
-                    imageHeight /= numPictures;
+                    //imageHeight /= numPictures;
                 }
             }
             return new PictureDimensions() { Height = imageHeight, Width = imageWidth };
