@@ -119,6 +119,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ViewModels\TooManyPicturesErrorViewModel.cs" />
+    <Compile Include="Views\TooManyPicturesErrorWindow.xaml.cs">
+      <DependentUpon>TooManyPicturesErrorWindow.xaml</DependentUpon>
+    </Compile>
     <Page Include="Views\PresentationMakerMainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -133,6 +137,10 @@
       <DependentUpon>PresentationMakerMainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Views\TooManyPicturesErrorWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">

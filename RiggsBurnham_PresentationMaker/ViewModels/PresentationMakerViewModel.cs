@@ -24,6 +24,7 @@ using Image = System.Windows.Controls.Image;
 using Google.Apis;
 using GoogleLibrary;
 using ILibrary;
+using RiggsBurnham_PresentationMaker.Views;
 using Application = Microsoft.Office.Interop.PowerPoint.Application;
 
 
@@ -52,6 +53,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         private IData _selectedExportImage;
         private List<string> _imagePaths;
         private ObservableCollection<IData> _selectedImages;
+        private TooManyPicturesErrorWindow _tooManyPicturesError;
         #endregion
 
         #region property changed
@@ -225,6 +227,12 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 _selectedImages = value;
                 NotifyPropertyChanged();
             }
+        }
+
+        public TooManyPicturesErrorWindow TooManyPicturesError
+        {
+            get => _tooManyPicturesError;
+            set => _tooManyPicturesError = value;
         }
         #endregion
 
@@ -474,8 +482,10 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             if (SelectedImage == null) return;
             if (SelectedImages.Count == 4)
             {
-                MessageBox.Show("Can only add 4 pictures, please remove one before adding",
-                    "Error - Too many pictures");
+                //MessageBox.Show("Can only add 4 pictures, please remove one before adding",
+                //    "Error - Too many pictures");
+                TooManyPicturesError = new TooManyPicturesErrorWindow(this);
+                TooManyPicturesError.Show();
                 return;
             }
             SelectedImages.Add(SelectedImage);
@@ -588,6 +598,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             ObservableCollection<IData> images = new ObservableCollection<IData>();
             foreach (Item item in _googleImages.GData.items)
             {
+                if (item.pagemap?.cse_image == null) continue;
                 foreach (Cse_Image img in item.pagemap.cse_image)
                 {
                     images.Add(img);
