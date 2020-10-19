@@ -2,26 +2,15 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
-using System.Net.Mime;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Controls;
 using Microsoft.Office.Core;
 using Microsoft.Office.Interop.PowerPoint;
 using Microsoft.Win32;
 using Prism.Commands;
-using System.Drawing;
 using System.IO;
 using System.Net;
-using System.Net.Http;
-using System.Windows;
-using System.Windows.Shapes;
 using RiggsBurnham_PresentationMaker.Models;
-using Image = System.Windows.Controls.Image;
-using Google.Apis;
 using GoogleLibrary;
 using ILibrary;
 using RiggsBurnham_PresentationMaker.Views;
@@ -51,7 +40,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         private string _selectedImageUrl = "";
         private IData _selectedImage;
         private IData _selectedExportImage;
-        private List<string> _imagePaths;
         private ObservableCollection<IData> _selectedImages;
         private TooManyPicturesErrorWindow _tooManyPicturesError;
         #endregion
@@ -71,7 +59,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         public PresentationMakerViewModel()
         {
             GoogleImages = new GoogleImages();
-            ImagePaths = new List<string>();
             SelectedImages = new ObservableCollection<IData>();
             SavePowerpointCommand = new DelegateCommand(SavePowerpoint);
             SearchImagesCommand = new DelegateCommand(SearchImages);
@@ -205,16 +192,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             set
             {
                 _selectedExportImage = value;
-                NotifyPropertyChanged();
-            }
-        }
-
-        public List<string> ImagePaths
-        {
-            get => _imagePaths;
-            set
-            {
-                _imagePaths = value;
                 NotifyPropertyChanged();
             }
         }
@@ -472,18 +449,11 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
 
         public DelegateCommand AddImageCommand { get; set; }
 
-        //private void AddImage()
-        //{
-        //    if (SelectedImageUrl == "") return;
-        //    ImagePaths.Add(SelectedImageUrl);
-        //}
         private void AddImage()
         {
             if (SelectedImage == null) return;
             if (SelectedImages.Count == 4)
             {
-                //MessageBox.Show("Can only add 4 pictures, please remove one before adding",
-                //    "Error - Too many pictures");
                 TooManyPicturesError = new TooManyPicturesErrorWindow(this);
                 TooManyPicturesError.Show();
                 return;
@@ -501,13 +471,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         }
 
         public DelegateCommand<object> SelectedImageChangedCommand { get; set; }
-
-        //private void SelectedImageChanged(object selectedItem)
-        //{
-        //    IData img = selectedItem as IData;
-        //    if (img == null) return;
-        //    SelectedImageUrl = img.URL;
-        //}
 
         private void SelectedImageChanged(object selectedItem)
         {
