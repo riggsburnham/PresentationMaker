@@ -10,6 +10,7 @@ using Microsoft.Win32;
 using Prism.Commands;
 using System.IO;
 using System.Net;
+using System.Threading.Tasks;
 using RiggsBurnham_PresentationMaker.Models;
 using GoogleLibrary;
 using ILibrary;
@@ -60,8 +61,8 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         {
             GoogleImages = new GoogleImages();
             SelectedImages = new ObservableCollection<IData>();
-            SavePowerpointCommand = new DelegateCommand(SavePowerpoint);
-            SearchImagesCommand = new DelegateCommand(SearchImages);
+            SavePowerpointCommand = new DelegateCommand(async () => await SavePowerpoint());
+            SearchImagesCommand = new DelegateCommand(async () => await SearchImages());
             AddImageCommand = new DelegateCommand(AddImage);
             RemoveSelectedExportImageCommand = new DelegateCommand(RemoveSelectedExportImage);
             SelectedImageChangedCommand = new DelegateCommand<object>(SelectedImageChanged);
@@ -215,236 +216,16 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
 
         #region commands
         public DelegateCommand SavePowerpointCommand { get; set; }
-        private void SavePowerpoint()
+        private async Task SavePowerpoint()
         {
-            SaveFileDialog saveFileDialog = new SaveFileDialog();
-            saveFileDialog.Filter = "Powerpoint files (*.pptx)|*.pptx|All files (*.*)|*.*";
-
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                Application pptApplication = new Application();
-                Presentation pptPresentation = pptApplication.Presentations.Add(MsoTriState.msoTrue);
-                CustomLayout customLayout = pptPresentation.SlideMaster.CustomLayouts[PpSlideLayout.ppLayoutText];
-                Slides slides = pptPresentation.Slides;
-                Slide slide = slides.AddSlide(1, customLayout);
-
-                // give title
-                TextRange objText = slide.Shapes[1].TextFrame.TextRange;
-
-                // modifying the title to only take up left half of page with a buffer gap of 10.
-                slide.Shapes[1].Width /= 2;
-                slide.Shapes[1].Width -= 10;
-                objText.Text = Title;
-                objText.Font.Name = "Arial";
-                objText.Font.Size = 32;
-
-                // description...
-                objText = slide.Shapes[2].TextFrame.TextRange;
-
-                // modifying the description to only take up left half of page with a buffer gap of 10.
-                slide.Shapes[2].Width /= 2;
-                slide.Shapes[2].Width -= 10;
-                objText.Text = Description;
-                objText.Font.Name = "Arial";
-                objText.Font.Size = 16;
-
-                
-
-                // will most likely limit number of images on a slide to 4...
-                PictureDimensions dimens = new PictureDimensions();
-                System.Drawing.Image img;
-                byte[] imgData;
-                MemoryStream imgStream;
-                float runningHeight = 0;
-                float runningWidth = 0;
-                switch (SelectedImages.Count)
-                {
-                    case 1:
-                        // resize picture to fit inside box while retaining same aspect ratio...
-                        imgData = new WebClient().DownloadData(SelectedImages[0].URL);
-                        imgStream = new MemoryStream(imgData);
-                        img = System.Drawing.Image.FromStream(imgStream);
-                        dimens = ResizePicture(img.Width, img.Height, false);
-                        slide.Shapes.AddPicture(
-                            SelectedImages[0].URL, 
-                            Microsoft.Office.Core.MsoTriState.msoFalse,
-                            Microsoft.Office.Core.MsoTriState.msoTrue, 
-                            PICTURE_BOX_LEFT, 
-                            PICTURE_BOX_TOP, 
-                            Convert.ToSingle(dimens.Width), 
-                            Convert.ToSingle(dimens.Height)
-                            );
-                        break;
-                    case 2:
-                        runningHeight = 0;
-                        for (int i = 0; i < 2; ++i)
-                        {
-                            imgData = new WebClient().DownloadData(SelectedImages[i].URL);
-                            imgStream = new MemoryStream(imgData);
-                            img = System.Drawing.Image.FromStream(imgStream);
-                            dimens = ResizePicture(img.Width, img.Height, true);
-                            switch (i)
-                            {
-                                case 0:
-                                    // first picure will be placed above the second, will use returned values without modifying them
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL, 
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue, 
-                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP, 
-                                        Convert.ToSingle(dimens.Width), 
-                                        Convert.ToSingle(dimens.Height)
-                                        );
-                                    runningHeight = Convert.ToSingle(dimens.Height);
-                                    break;
-                                case 1:
-                                    // second picture will be placed below the first, will need to modify the top by the height the the picture before...
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL, 
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue, 
-                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, 
-                                        Convert.ToSingle(dimens.Width), 
-                                        Convert.ToSingle(dimens.Height)
-                                        );
-                                    break;
-                            }
-                            
-                        }
-                        break;
-                    case 3:
-                        runningHeight = 0;
-                        runningWidth = 0;
-                        for (int i = 0; i < 3; ++i)
-                        {
-                            imgData = new WebClient().DownloadData(SelectedImages[i].URL);
-                            imgStream = new MemoryStream(imgData);
-                            img = System.Drawing.Image.FromStream(imgStream);
-                            dimens = ResizePicture(img.Width, img.Height, true);
-                            switch (i)
-                            {
-                                case 0:
-                                    // first picure will be placed above the second, will use returned values without modifying them
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL, 
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue, 
-                                        PICTURE_BOX_LEFT, 
-                                        PICTURE_BOX_TOP, 
-                                        Convert.ToSingle(dimens.Width), 
-                                        Convert.ToSingle(dimens.Height)
-                                        );
-                                    runningHeight = Convert.ToSingle(dimens.Height);
-                                    break;
-                                case 1:
-                                    // second picture will be placed below the first, will need to modify the top by the height the the picture before...
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue, 
-                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, 
-                                        Convert.ToSingle(dimens.Width), 
-                                        Convert.ToSingle(dimens.Height)
-                                        );
-                                    runningWidth = Convert.ToSingle(dimens.Width);
-                                    break;
-                                case 2:
-                                    // third picture will be placed to the right of the second, will need to modify both top and left by the height and width of previous pic
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL, 
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue, 
-                                        PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER, 
-                                        PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, 
-                                        Convert.ToSingle(dimens.Width), 
-                                        Convert.ToSingle(dimens.Height)
-                                        );
-                                    break;
-                            }
-
-                        }
-                        break;
-                    case 4:
-                        runningHeight = 0;
-                        runningWidth = 0;
-                        for (int i = 0; i < 4; ++i)
-                        {
-                            imgData = new WebClient().DownloadData(SelectedImages[i].URL);
-                            imgStream = new MemoryStream(imgData);
-                            img = System.Drawing.Image.FromStream(imgStream);
-                            dimens = ResizePicture(img.Width, img.Height, true);
-                            switch (i)
-                            {
-                                case 0:
-                                    // first picure will be placed above the second, will use returned values without modifying them
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL, 
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue, 
-                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP, 
-                                        Convert.ToSingle(dimens.Width), 
-                                        Convert.ToSingle(dimens.Height)
-                                        );
-                                    runningWidth = Convert.ToSingle(dimens.Width);
-                                    runningHeight = Convert.ToSingle(dimens.Height);
-                                    break;
-                                case 1:
-                                    // second picture will be placed to the right of the first, will add width of first to left value
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL, 
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue, 
-                                        PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER, 
-                                        PICTURE_BOX_TOP, 
-                                        Convert.ToSingle(dimens.Width), 
-                                        Convert.ToSingle(dimens.Height)
-                                        );
-                                    runningWidth = Convert.ToSingle(dimens.Width);
-                                    runningHeight = Convert.ToSingle(dimens.Height);
-                                    break;
-                                case 2:
-                                    // third picture will be placed below the first, will add height of the first to top value
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL, 
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT, 
-                                        PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, 
-                                        Convert.ToSingle(dimens.Width), 
-                                        Convert.ToSingle(dimens.Height)
-                                        );
-                                    runningWidth = Convert.ToSingle(dimens.Width);
-                                    break;
-                                case 3:
-                                    // fourth picture will be placed below the second, will add width of the third to width, height of the second to top
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL, 
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue, 
-                                        PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER,
-                                        PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, 
-                                        Convert.ToSingle(dimens.Width), 
-                                        Convert.ToSingle(dimens.Height)
-                                        );
-                                    break;
-                            }
-                        }
-                        break;
-                }
-                // save new powerpoint
-                pptPresentation.SaveAs(saveFileDialog.FileName, PpSaveAsFileType.ppSaveAsDefault, MsoTriState.msoTrue);
-            }
+            await Task.Run(PerformSave);
         }
 
         public DelegateCommand SearchImagesCommand { get; set; }
 
-        private void SearchImages()
+        private async Task SearchImages()
         {
-            List<string> titleString = Title.Split(' ').ToList();
-            List<string> descriptionString = Description.Split(' ').ToList();
-            titleString.AddRange(descriptionString);
-            GoogleImages.SearchGoogleImages(titleString);
-            Images = LoadGoogleImages();
+            await Task.Run(PerformSearch);
         }
 
         public DelegateCommand AddImageCommand { get; set; }
@@ -491,12 +272,11 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
 
         #region private functions
         /// <summary>
-        /// Pass the width, height, number of pictures to this function in order to resize
+        /// Pass the width, height, boolean value if there is more than 1 picture to be displayed
         /// </summary>
         /// <param name="imageWidth"></param>
         /// <param name="imageHeight"></param>
-        /// <param name="numPictures"></param>
-        /// <param name="pictureNumber"></param>
+        /// <param name="moreThanOnePicture"></param>
         /// <returns>
         /// a class that holds the new size
         /// </returns>
@@ -568,6 +348,250 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 }
             }
             return images;
+        }
+
+        private void PerformSave()
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "Powerpoint files (*.pptx)|*.pptx|All files (*.*)|*.*";
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                Application pptApplication = new Application();
+                Presentation pptPresentation = pptApplication.Presentations.Add(MsoTriState.msoTrue);
+                CustomLayout customLayout = pptPresentation.SlideMaster.CustomLayouts[PpSlideLayout.ppLayoutText];
+                Slides slides = pptPresentation.Slides;
+                Slide slide = slides.AddSlide(1, customLayout);
+
+                // give title
+                TextRange objText = slide.Shapes[1].TextFrame.TextRange;
+
+                // modifying the title to only take up left half of page with a buffer gap of 10.
+                slide.Shapes[1].Width /= 2;
+                slide.Shapes[1].Width -= 10;
+                objText.Text = Title;
+                objText.Font.Name = "Arial";
+                objText.Font.Size = 32;
+
+                // description...
+                objText = slide.Shapes[2].TextFrame.TextRange;
+
+                // modifying the description to only take up left half of page with a buffer gap of 10.
+                slide.Shapes[2].Width /= 2;
+                slide.Shapes[2].Width -= 10;
+                objText.Text = Description;
+                objText.Font.Name = "Arial";
+                objText.Font.Size = 16;
+
+                // will most likely limit number of images on a slide to 4...
+                PictureDimensions dimens = new PictureDimensions();
+                System.Drawing.Image img;
+                byte[] imgData;
+                MemoryStream imgStream;
+                float runningHeight = 0;
+                float runningWidth = 0;
+                switch (SelectedImages.Count)
+                {
+                    case 1:
+                        // resize picture to fit inside box while retaining same aspect ratio...
+                        imgData = new WebClient().DownloadData(SelectedImages[0].URL);
+                        imgStream = new MemoryStream(imgData);
+                        img = System.Drawing.Image.FromStream(imgStream);
+                        dimens = ResizePicture(img.Width, img.Height, false);
+                        slide.Shapes.AddPicture(
+                            SelectedImages[0].URL,
+                            Microsoft.Office.Core.MsoTriState.msoFalse,
+                            Microsoft.Office.Core.MsoTriState.msoTrue,
+                            PICTURE_BOX_LEFT,
+                            PICTURE_BOX_TOP,
+                            Convert.ToSingle(dimens.Width),
+                            Convert.ToSingle(dimens.Height)
+                            );
+                        break;
+                    case 2:
+                        runningHeight = 0;
+                        for (int i = 0; i < 2; ++i)
+                        {
+                            imgData = new WebClient().DownloadData(SelectedImages[i].URL);
+                            imgStream = new MemoryStream(imgData);
+                            img = System.Drawing.Image.FromStream(imgStream);
+                            dimens = ResizePicture(img.Width, img.Height, true);
+                            switch (i)
+                            {
+                                case 0:
+                                    // first picure will be placed above the second, will use returned values without modifying them
+                                    slide.Shapes.AddPicture(
+                                        SelectedImages[i].URL,
+                                        Microsoft.Office.Core.MsoTriState.msoFalse,
+                                        Microsoft.Office.Core.MsoTriState.msoTrue,
+                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP,
+                                        Convert.ToSingle(dimens.Width),
+                                        Convert.ToSingle(dimens.Height)
+                                        );
+                                    runningHeight = Convert.ToSingle(dimens.Height);
+                                    break;
+                                case 1:
+                                    // second picture will be placed below the first, will need to modify the top by the height the the picture before...
+                                    slide.Shapes.AddPicture(
+                                        SelectedImages[i].URL,
+                                        Microsoft.Office.Core.MsoTriState.msoFalse,
+                                        Microsoft.Office.Core.MsoTriState.msoTrue,
+                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER,
+                                        Convert.ToSingle(dimens.Width),
+                                        Convert.ToSingle(dimens.Height)
+                                        );
+                                    break;
+                            }
+
+                        }
+                        break;
+                    case 3:
+                        runningHeight = 0;
+                        runningWidth = 0;
+                        for (int i = 0; i < 3; ++i)
+                        {
+                            imgData = new WebClient().DownloadData(SelectedImages[i].URL);
+                            imgStream = new MemoryStream(imgData);
+                            img = System.Drawing.Image.FromStream(imgStream);
+                            dimens = ResizePicture(img.Width, img.Height, true);
+                            switch (i)
+                            {
+                                case 0:
+                                    // first picure will be placed above the second, will use returned values without modifying them
+                                    slide.Shapes.AddPicture(
+                                        SelectedImages[i].URL,
+                                        Microsoft.Office.Core.MsoTriState.msoFalse,
+                                        Microsoft.Office.Core.MsoTriState.msoTrue,
+                                        PICTURE_BOX_LEFT,
+                                        PICTURE_BOX_TOP,
+                                        Convert.ToSingle(dimens.Width),
+                                        Convert.ToSingle(dimens.Height)
+                                        );
+                                    runningHeight = Convert.ToSingle(dimens.Height);
+                                    break;
+                                case 1:
+                                    // second picture will be placed below the first, will need to modify the top by the height the the picture before...
+                                    slide.Shapes.AddPicture(
+                                        SelectedImages[i].URL,
+                                        Microsoft.Office.Core.MsoTriState.msoFalse,
+                                        Microsoft.Office.Core.MsoTriState.msoTrue,
+                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER,
+                                        Convert.ToSingle(dimens.Width),
+                                        Convert.ToSingle(dimens.Height)
+                                        );
+                                    runningWidth = Convert.ToSingle(dimens.Width);
+                                    break;
+                                case 2:
+                                    // third picture will be placed to the right of the second, will need to modify both top and left by the height and width of previous pic
+                                    slide.Shapes.AddPicture(
+                                        SelectedImages[i].URL,
+                                        Microsoft.Office.Core.MsoTriState.msoFalse,
+                                        Microsoft.Office.Core.MsoTriState.msoTrue,
+                                        PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER,
+                                        PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER,
+                                        Convert.ToSingle(dimens.Width),
+                                        Convert.ToSingle(dimens.Height)
+                                        );
+                                    break;
+                            }
+
+                        }
+                        break;
+                    case 4:
+                        runningHeight = 0;
+                        runningWidth = 0;
+                        float oldRunningHeight = 0;
+                        float oldRunningWidth = 0;
+                        for (int i = 0; i < 4; ++i)
+                        {
+                            imgData = new WebClient().DownloadData(SelectedImages[i].URL);
+                            imgStream = new MemoryStream(imgData);
+                            img = System.Drawing.Image.FromStream(imgStream);
+                            dimens = ResizePicture(img.Width, img.Height, true);
+                            switch (i)
+                            {
+                                case 0:
+                                    // first picure will be placed above the second, will use returned values without modifying them
+                                    slide.Shapes.AddPicture(
+                                        SelectedImages[i].URL,
+                                        Microsoft.Office.Core.MsoTriState.msoFalse,
+                                        Microsoft.Office.Core.MsoTriState.msoTrue,
+                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP,
+                                        Convert.ToSingle(dimens.Width),
+                                        Convert.ToSingle(dimens.Height)
+                                        );
+                                    runningWidth = Convert.ToSingle(dimens.Width);
+                                    runningHeight = Convert.ToSingle(dimens.Height);
+                                    break;
+                                case 1:
+                                    // second picture will be placed to the right of the first, will add width of first to left value
+                                    slide.Shapes.AddPicture(
+                                        SelectedImages[i].URL,
+                                        Microsoft.Office.Core.MsoTriState.msoFalse,
+                                        Microsoft.Office.Core.MsoTriState.msoTrue,
+                                        PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER,
+                                        PICTURE_BOX_TOP,
+                                        Convert.ToSingle(dimens.Width),
+                                        Convert.ToSingle(dimens.Height)
+                                        );
+                                    oldRunningWidth = runningWidth;
+                                    runningWidth = Convert.ToSingle(dimens.Width);
+                                    oldRunningHeight = runningHeight;
+                                    runningHeight = Convert.ToSingle(dimens.Height);
+                                    break;
+                                case 2:
+                                    // third picture will be placed below the first, will add height of the first to top value
+                                    slide.Shapes.AddPicture(
+                                        SelectedImages[i].URL,
+                                        Microsoft.Office.Core.MsoTriState.msoFalse,
+                                        Microsoft.Office.Core.MsoTriState.msoTrue,
+                                        PICTURE_BOX_LEFT,
+                                        PICTURE_BOX_TOP + oldRunningHeight + PICTURE_BUFFER,
+                                        Convert.ToSingle(dimens.Width),
+                                        Convert.ToSingle(dimens.Height)
+                                        );
+                                    runningWidth = Convert.ToSingle(dimens.Width);
+                                    break;
+                                case 3:
+                                    // fourth picture will be placed below the second, will add width of the third to width, height of the second to top
+                                    float widthShiftValue = runningWidth;
+                                    if (oldRunningHeight > runningHeight)
+                                    {
+                                        if (oldRunningWidth > runningWidth)
+                                        {
+                                            widthShiftValue = oldRunningWidth;
+                                        }
+                                        else
+                                        {
+                                            widthShiftValue = runningWidth;
+                                        }
+                                    }
+                                    slide.Shapes.AddPicture(
+                                        SelectedImages[i].URL,
+                                        Microsoft.Office.Core.MsoTriState.msoFalse,
+                                        Microsoft.Office.Core.MsoTriState.msoTrue,
+                                        PICTURE_BOX_LEFT + widthShiftValue + PICTURE_BUFFER,
+                                        PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER,
+                                        Convert.ToSingle(dimens.Width),
+                                        Convert.ToSingle(dimens.Height)
+                                        );
+                                    break;
+                            }
+                        }
+                        break;
+                }
+                // save new powerpoint
+                pptPresentation.SaveAs(saveFileDialog.FileName, PpSaveAsFileType.ppSaveAsDefault, MsoTriState.msoTrue);
+            }
+        }
+
+        private void PerformSearch()
+        {
+            List<string> titleString = Title.Split(' ').ToList();
+            List<string> descriptionString = Description.Split(' ').ToList();
+            titleString.AddRange(descriptionString);
+            GoogleImages.SearchGoogleImages(titleString);
+            Images = LoadGoogleImages();
         }
         #endregion
     }
