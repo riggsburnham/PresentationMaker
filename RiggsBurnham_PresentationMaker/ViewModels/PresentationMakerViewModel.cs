@@ -104,7 +104,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             get => _description;
             set
             {
-                //_description = value;
                 Xceed.Wpf.Toolkit.RichTextBox rtBox = new Xceed.Wpf.Toolkit.RichTextBox(new FlowDocument());
                 rtBox.Text = value;
                 rtBox.TextFormatter = new Xceed.Wpf.Toolkit.RtfFormatter();
@@ -408,15 +407,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 slide.Shapes[1].Width /= 2;
                 slide.Shapes[1].Width -= 10;
 
-                objText.Text = _plainTextTitle;
-                for (var i = 0; i < objText.Text.Length; ++i)
-                {
-                    if (_csTitleList[i].IsBold)
-                    {
-                        objText.Characters(i+1, 1).Font.Bold = MsoTriState.msoTrue;
-                        // TODO: can further implement italic and, underline
-                    }
-                }
+                objText = StyleHandler(_plainTextTitle, objText);
                 objText.Font.Name = "Arial";
                 objText.Font.Size = 32;
 
@@ -427,16 +418,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 slide.Shapes[2].Width /= 2;
                 slide.Shapes[2].Width -= 10;
 
-                objText.Text = _plainTextDescription;
-                for (var i = 0; i < objText.Text.Length; ++i)
-                {
-                    if (_csDescriptionList[i].IsBold)
-                    {
-                        objText.Characters(i + 1, 1).Font.Bold = MsoTriState.msoTrue;
-                        // TODO: can further implement italic and, underline
-                    }
-                }
-
+                objText = StyleHandler(_plainTextDescription, objText);
                 objText.Font.Name = "Arial";
                 objText.Font.Size = 16;
 
@@ -582,11 +564,6 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 }
                 // save new powerpoint
                 pptPresentation.SaveAs(saveFileDialog.FileName, PpSaveAsFileType.ppSaveAsDefault, MsoTriState.msoTrue);
-                //if (failedLoadingPicture == true)
-                //{
-                //    //FailedToLoadPictureError = new ErrorWindow(this, "Failed Loading a Picture", "A picture failed to load");
-                //    FailedToLoadPictureError.Show();
-                //}
             }
         }
 
@@ -599,11 +576,29 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             Images = LoadGoogleImages();
         }
 
+        private TextRange StyleHandler(string text, TextRange objText)
+        {
+            objText.Text = text;
+            for (var i = 0; i < objText.Text.Length; ++i)
+            {
+                if (_csTitleList[i].IsBold)
+                {
+                    objText.Characters(i + 1, 1).Font.Bold = MsoTriState.msoTrue;
+                }
+                if (_csTitleList[i].IsItalic)
+                {
+                    objText.Characters(i + 1, 1).Font.Italic = MsoTriState.msoTrue;
+                }
+                if (_csTitleList[i].IsUnderline)
+                {
+                    objText.Characters(i + 1, 1).Font.Underline = MsoTriState.msoTrue;
+                }
+            }
+            return objText;
+        }
         private List<CharacterStyle> ConvertRtfTextToCharacterStyles(string rtfText)
         {
             List<CharacterStyle> csList = new List<CharacterStyle>();
-
-            //_title = value;
             var rtfParts = rtfText.Split('{', '}');
             List<string> found = new List<string>();
             foreach (var part in rtfParts)
@@ -613,16 +608,51 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                     found.Add(part);
                 }
             }
-            //List<CharacterStyle> csList = new List<CharacterStyle>();
-            int i = 0;
-            bool isBold = false;
             string word = "";
             foreach (string styleWord in found)
             {
-                if (styleWord.Contains("\\b\\ltrch"))
+                bool isBold = false;
+                bool isItalic = false;
+                bool isUnderline = false;
+                if (styleWord.Contains("\\b\\i\\ul\\ltrch"))
+                {
+                    isUnderline = true;
+                    isItalic = true;
+                    isBold = true;
+                    word = styleWord.Remove(0, 14);
+                }
+                else if (styleWord.Contains("\\b\\ul\\ltrch"))
+                {
+                    isBold = true;
+                    isUnderline = true;
+                    word = styleWord.Remove(0, 12);
+                }
+                else if (styleWord.Contains("\\b\\i\\ltrch"))
+                {
+                    isBold = true;
+                    isItalic = true;
+                    word = styleWord.Remove(0, 11);
+                }
+                else if (styleWord.Contains("\\i\\ul\\ltrch"))
+                {
+                    isUnderline = true;
+                    isItalic = true;
+                    word = styleWord.Remove(0, 12);
+                }
+                else if (styleWord.Contains("\\b\\ltrch"))
                 {
                     isBold = true;
                     word = styleWord.Remove(0, 9);
+                } 
+                else if (styleWord.Contains("\\i\\ltrch"))
+                {
+                    isItalic = true;
+                    word = styleWord.Remove(0, 9);
+                }
+                else if (styleWord.Contains("\\ul\\ltrch"))
+                {
+                    isUnderline = true;
+                    word = styleWord.Remove(0, 10);
                 }
                 else
                 {
@@ -633,11 +663,10 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                     CharacterStyle cs = new CharacterStyle();
                     cs.Character = character;
                     cs.IsBold = isBold;
-                    cs.Position = i;
+                    cs.IsItalic = isItalic;
+                    cs.IsUnderline = isUnderline;
                     csList.Add(cs);
-                    ++i;
                 }
-                isBold = false;
             }
 
             return csList;
@@ -657,21 +686,12 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
 
         private PictureDimensions CalculateDimensions(string url)
         {
-            //try
-            //{
-                PictureDimensions dimens = new PictureDimensions();
-                byte[] imgData = new WebClient().DownloadData(url);
-                MemoryStream imgStream = new MemoryStream(imgData);
-                System.Drawing.Image img = System.Drawing.Image.FromStream(imgStream);
-                dimens = ResizePicture(img.Width, img.Height, false);
-                return dimens;
-            //}
-            //catch
-            //{
-            //    FailedToLoadPictureError = new ErrorWindow(this, "Failed Loading a Picture", "A picture failed to load");
-            //    FailedToLoadPictureError.Show();
-            //    throw;
-            //}
+            PictureDimensions dimens = new PictureDimensions();
+            byte[] imgData = new WebClient().DownloadData(url);
+            MemoryStream imgStream = new MemoryStream(imgData);
+            System.Drawing.Image img = System.Drawing.Image.FromStream(imgStream);
+            dimens = ResizePicture(img.Width, img.Height, false);
+            return dimens;
         }
         #endregion
     }

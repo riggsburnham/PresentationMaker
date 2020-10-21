@@ -9,7 +9,8 @@ namespace RiggsBurnham_PresentationMaker.Models
     public class CharacterStyle
     {
         public char Character { get; set; }
-        public int Position { get; set; }
         public bool IsBold { get; set; }
+        public bool IsItalic { get; set; }
+        public bool IsUnderline { get; set; }
     }
 }
