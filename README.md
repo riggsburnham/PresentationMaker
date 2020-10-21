@@ -6,5 +6,7 @@ A limitation for this project is that you can only add up to four pictures. Curr
 Can bold, italic and unline both title and description.
 
 To bold use the hot key ctrl + b
+
 To italic use the hot key ctrl + i
+
 To underline use the hot key ctrl + ul
