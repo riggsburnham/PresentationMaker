@@ -5,6 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:RiggsBurnham_PresentationMaker"
         xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+        xmlns:toolkit="clr-namespace:System.Windows.Controls;assembly=PresentationFramework"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         mc:Ignorable="d"
         Title="Riggs Burnham - Presentation Maker" Height="450" Width="1000"
         Background="#2B2A30"
@@ -53,19 +55,19 @@
                         <RowDefinition Height="*"></RowDefinition>
                         <RowDefinition Height="*"></RowDefinition>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Title"
-                           FontSize="16"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Grid.Row="0">
-                    </TextBlock>
+                    <Border>
+                        <TextBlock Text="Title"
+                                   FontSize="16"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Grid.Row="0">
+                        </TextBlock>
+                    </Border>
                     <Border Grid.Row="1">
-                        <TextBox TextAlignment="Center"
-                                 VerticalAlignment="Stretch"
-                                 VerticalContentAlignment="Center"
-                                 Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-
-                        </TextBox>
+                        <xctk:RichTextBox Name="TitleRichTB" VerticalContentAlignment="Center"
+                                          HorizontalContentAlignment="Center"
+                                          Text="{Binding Title, Mode=TwoWay}">
+                        </xctk:RichTextBox>
                     </Border>
                 </Grid>
                 <Grid Row="1"
@@ -79,17 +81,20 @@
                         <RowDefinition Height="*"></RowDefinition>
                         <RowDefinition Height="*"></RowDefinition>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Description"
-                               FontSize="16"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Grid.Row="0">
-                    </TextBlock>
+                    <Border Grid.Row="0">
+                        <TextBlock Text="Description"
+                                   FontSize="16"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center">
+                        </TextBlock>
+                    </Border>
                     <Border Grid.Row="1"
                             Grid.RowSpan="4">
-                        <TextBox TextWrapping="Wrap"
+                        <!--<TextBox TextWrapping="Wrap"
                                  Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        </TextBox>
+                        </TextBox>-->
+                        <xctk:RichTextBox Text="{Binding Description, Mode=TwoWay}">
+                        </xctk:RichTextBox>
                     </Border>
                 </Grid>
                 <Grid Grid.Row="4"
@@ -124,12 +129,13 @@
                 Grid.ColumnSpan="2"
                 Margin="5,5,5,5">
             <DockPanel>
-                <TextBlock Text="Images"
-                           HorizontalAlignment="Stretch"
-                           TextAlignment="Center"
-                           VerticalAlignment="Top"
-                           DockPanel.Dock="Top">
-                </TextBlock>
+                <Border DockPanel.Dock="Top">
+                    <TextBlock Text="Images"
+                               HorizontalAlignment="Stretch"
+                               TextAlignment="Center"
+                               VerticalAlignment="Top">
+                    </TextBlock>
+                </Border>
                 <Grid>
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                   BorderThickness="0">
@@ -170,12 +176,13 @@
         <Border Grid.Column="4"
                 Margin="5,5,5,5">
             <DockPanel>
-                <TextBlock Text="Selected Images"
-                           HorizontalAlignment="Stretch"
-                           TextAlignment="Center"
-                           VerticalAlignment="Top"
-                           DockPanel.Dock="Top">
-                </TextBlock>
+                <Border DockPanel.Dock="Top">
+                    <TextBlock Text="Selected Images"
+                               HorizontalAlignment="Stretch"
+                               TextAlignment="Center"
+                               VerticalAlignment="Top">
+                    </TextBlock>
+                </Border>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"></RowDefinition>

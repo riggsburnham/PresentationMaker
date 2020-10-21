@@ -15,14 +15,11 @@ using RiggsBurnham_PresentationMaker.ViewModels;
 
 namespace RiggsBurnham_PresentationMaker.Views
 {
-    /// <summary>
-    /// Interaction logic for TooManyPicturesErrorWindow.xaml
-    /// </summary>
-    public partial class TooManyPicturesErrorWindow : Window
+    public partial class ErrorWindow : Window
     {
-        public TooManyPicturesErrorWindow(PresentationMakerViewModel parent)
+        public ErrorWindow(PresentationMakerViewModel parent, string errorTitle, string errorDescription)
         {
-            DataContext = new TooManyPicturesErrorViewModel(parent);
+            DataContext = new TooManyPicturesErrorViewModel(parent, errorTitle, errorDescription);
             InitializeComponent();
         }
     }

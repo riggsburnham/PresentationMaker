@@ -11,11 +11,14 @@ using Prism.Commands;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using System.Windows.Documents;
+using System.Windows.Input;
 using RiggsBurnham_PresentationMaker.Models;
 using GoogleLibrary;
 using ILibrary;
 using RiggsBurnham_PresentationMaker.Views;
 using Application = Microsoft.Office.Interop.PowerPoint.Application;
+using TextRange = Microsoft.Office.Interop.PowerPoint.TextRange;
 
 
 namespace RiggsBurnham_PresentationMaker.ViewModels
@@ -42,7 +45,15 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         private IData _selectedImage;
         private IData _selectedExportImage;
         private ObservableCollection<IData> _selectedImages;
-        private TooManyPicturesErrorWindow _tooManyPicturesError;
+        private ErrorWindow _tooManyPicturesError;
+        private ErrorWindow _failedToLoadPictureError;
+        private string _plainTextTitle = "";
+        private string _rtfTextTitle = "";
+        private string _plainTextDescription = "";
+        private string _rtfTextDescription = "";
+        private List<CharacterStyle> _csTitleList;
+        private List<CharacterStyle> _csDescriptionList;
+        private bool _failedToLoadPicture = false;
         #endregion
 
         #region property changed
@@ -76,7 +87,14 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             get => _title;
             set
             {
-                _title = value;
+                Xceed.Wpf.Toolkit.RichTextBox rtBox = new Xceed.Wpf.Toolkit.RichTextBox(new FlowDocument());
+                rtBox.Text = value;
+                rtBox.TextFormatter = new Xceed.Wpf.Toolkit.RtfFormatter();
+                _rtfTextTitle = rtBox.Text;
+                rtBox.TextFormatter = new Xceed.Wpf.Toolkit.PlainTextFormatter();
+                _plainTextTitle = rtBox.Text.Remove(rtBox.Text.Length - 2);
+                _csTitleList = ConvertRtfTextToCharacterStyles(_rtfTextTitle);
+                _title = _rtfTextTitle;
                 NotifyPropertyChanged();
             }
         }
@@ -86,7 +104,15 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             get => _description;
             set
             {
-                _description = value;
+                //_description = value;
+                Xceed.Wpf.Toolkit.RichTextBox rtBox = new Xceed.Wpf.Toolkit.RichTextBox(new FlowDocument());
+                rtBox.Text = value;
+                rtBox.TextFormatter = new Xceed.Wpf.Toolkit.RtfFormatter();
+                _rtfTextDescription = rtBox.Text;
+                rtBox.TextFormatter = new Xceed.Wpf.Toolkit.PlainTextFormatter();
+                _plainTextDescription = rtBox.Text.Remove(rtBox.Text.Length - 2);
+                _csDescriptionList = ConvertRtfTextToCharacterStyles(_rtfTextDescription);
+                _description = _rtfTextDescription;
                 NotifyPropertyChanged();
             }
         }
@@ -207,10 +233,16 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             }
         }
 
-        public TooManyPicturesErrorWindow TooManyPicturesError
+        public ErrorWindow TooManyPicturesError
         {
             get => _tooManyPicturesError;
             set => _tooManyPicturesError = value;
+        }
+
+        public ErrorWindow FailedToLoadPictureError
+        {
+            get => _failedToLoadPictureError;
+            set => _failedToLoadPictureError = value;
         }
         #endregion
 
@@ -219,6 +251,12 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
         private async Task SavePowerpoint()
         {
             await Task.Run(PerformSave);
+            if (_failedToLoadPicture == true)
+            {
+                FailedToLoadPictureError = new ErrorWindow(this, "!!! Error !!!", "Picture(s) failed to load");
+                FailedToLoadPictureError.Show();
+                _failedToLoadPicture = false;
+            }
         }
 
         public DelegateCommand SearchImagesCommand { get; set; }
@@ -235,7 +273,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
             if (SelectedImage == null) return;
             if (SelectedImages.Count == 4)
             {
-                TooManyPicturesError = new TooManyPicturesErrorWindow(this);
+                TooManyPicturesError = new ErrorWindow(this, "!!! Error !!!", "Can only add 4 pictures, please remove one before adding.");
                 TooManyPicturesError.Show();
                 return;
             }
@@ -369,7 +407,16 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 // modifying the title to only take up left half of page with a buffer gap of 10.
                 slide.Shapes[1].Width /= 2;
                 slide.Shapes[1].Width -= 10;
-                objText.Text = Title;
+
+                objText.Text = _plainTextTitle;
+                for (var i = 0; i < objText.Text.Length; ++i)
+                {
+                    if (_csTitleList[i].IsBold)
+                    {
+                        objText.Characters(i+1, 1).Font.Bold = MsoTriState.msoTrue;
+                        // TODO: can further implement italic and, underline
+                    }
+                }
                 objText.Font.Name = "Arial";
                 objText.Font.Size = 32;
 
@@ -379,67 +426,64 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 // modifying the description to only take up left half of page with a buffer gap of 10.
                 slide.Shapes[2].Width /= 2;
                 slide.Shapes[2].Width -= 10;
-                objText.Text = Description;
+
+                objText.Text = _plainTextDescription;
+                for (var i = 0; i < objText.Text.Length; ++i)
+                {
+                    if (_csDescriptionList[i].IsBold)
+                    {
+                        objText.Characters(i + 1, 1).Font.Bold = MsoTriState.msoTrue;
+                        // TODO: can further implement italic and, underline
+                    }
+                }
+
                 objText.Font.Name = "Arial";
                 objText.Font.Size = 16;
 
                 // will most likely limit number of images on a slide to 4...
-                PictureDimensions dimens = new PictureDimensions();
-                System.Drawing.Image img;
-                byte[] imgData;
-                MemoryStream imgStream;
+                PictureDimensions dimens;
                 float runningHeight = 0;
                 float runningWidth = 0;
+                bool failedLoadingPicture = false;
                 switch (SelectedImages.Count)
                 {
                     case 1:
                         // resize picture to fit inside box while retaining same aspect ratio...
-                        imgData = new WebClient().DownloadData(SelectedImages[0].URL);
-                        imgStream = new MemoryStream(imgData);
-                        img = System.Drawing.Image.FromStream(imgStream);
-                        dimens = ResizePicture(img.Width, img.Height, false);
-                        slide.Shapes.AddPicture(
-                            SelectedImages[0].URL,
-                            Microsoft.Office.Core.MsoTriState.msoFalse,
-                            Microsoft.Office.Core.MsoTriState.msoTrue,
-                            PICTURE_BOX_LEFT,
-                            PICTURE_BOX_TOP,
-                            Convert.ToSingle(dimens.Width),
-                            Convert.ToSingle(dimens.Height)
-                            );
+                        try
+                        {
+                            dimens = CalculateDimensions(SelectedImages[0].URL);
+                        }
+                        catch
+                        {
+                            _failedToLoadPicture = true;
+                            return;
+                        }
+                        
+                        AddPicture(slide, SelectedImages[0].URL, PICTURE_BOX_LEFT, PICTURE_BOX_TOP, dimens.Width, dimens.Height);
                         break;
                     case 2:
                         runningHeight = 0;
                         for (int i = 0; i < 2; ++i)
                         {
-                            imgData = new WebClient().DownloadData(SelectedImages[i].URL);
-                            imgStream = new MemoryStream(imgData);
-                            img = System.Drawing.Image.FromStream(imgStream);
-                            dimens = ResizePicture(img.Width, img.Height, true);
+                            try
+                            {
+                                dimens = CalculateDimensions(SelectedImages[i].URL);
+                            }
+                            catch
+                            {
+                                _failedToLoadPicture = true;
+                                continue;
+                            }
                             switch (i)
                             {
                                 case 0:
                                     // first picure will be placed above the second, will use returned values without modifying them
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP,
-                                        Convert.ToSingle(dimens.Width),
-                                        Convert.ToSingle(dimens.Height)
-                                        );
+                                    AddPicture(slide, SelectedImages[i].URL, PICTURE_BOX_LEFT, PICTURE_BOX_TOP, dimens.Width, dimens.Height);
                                     runningHeight = Convert.ToSingle(dimens.Height);
                                     break;
                                 case 1:
                                     // second picture will be placed below the first, will need to modify the top by the height the the picture before...
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER,
-                                        Convert.ToSingle(dimens.Width),
-                                        Convert.ToSingle(dimens.Height)
-                                        );
+                                    AddPicture(slide, SelectedImages[i].URL, PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, dimens.Width, dimens.Height);
                                     break;
                             }
 
@@ -450,48 +494,30 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         runningWidth = 0;
                         for (int i = 0; i < 3; ++i)
                         {
-                            imgData = new WebClient().DownloadData(SelectedImages[i].URL);
-                            imgStream = new MemoryStream(imgData);
-                            img = System.Drawing.Image.FromStream(imgStream);
-                            dimens = ResizePicture(img.Width, img.Height, true);
+                            try
+                            {
+                                dimens = CalculateDimensions(SelectedImages[i].URL);
+                            }
+                            catch
+                            {
+                                _failedToLoadPicture = true;
+                                continue;
+                            }
                             switch (i)
                             {
                                 case 0:
                                     // first picure will be placed above the second, will use returned values without modifying them
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT,
-                                        PICTURE_BOX_TOP,
-                                        Convert.ToSingle(dimens.Width),
-                                        Convert.ToSingle(dimens.Height)
-                                        );
+                                    AddPicture(slide, SelectedImages[i].URL, PICTURE_BOX_LEFT, PICTURE_BOX_TOP, dimens.Width, dimens.Height);
                                     runningHeight = Convert.ToSingle(dimens.Height);
                                     break;
                                 case 1:
                                     // second picture will be placed below the first, will need to modify the top by the height the the picture before...
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER,
-                                        Convert.ToSingle(dimens.Width),
-                                        Convert.ToSingle(dimens.Height)
-                                        );
+                                    AddPicture(slide, SelectedImages[i].URL, PICTURE_BOX_LEFT, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, dimens.Width, dimens.Height);
                                     runningWidth = Convert.ToSingle(dimens.Width);
                                     break;
                                 case 2:
                                     // third picture will be placed to the right of the second, will need to modify both top and left by the height and width of previous pic
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER,
-                                        PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER,
-                                        Convert.ToSingle(dimens.Width),
-                                        Convert.ToSingle(dimens.Height)
-                                        );
+                                    AddPicture(slide, SelectedImages[i].URL, PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, dimens.Width, dimens.Height);
                                     break;
                             }
 
@@ -504,36 +530,26 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                         float oldRunningWidth = 0;
                         for (int i = 0; i < 4; ++i)
                         {
-                            imgData = new WebClient().DownloadData(SelectedImages[i].URL);
-                            imgStream = new MemoryStream(imgData);
-                            img = System.Drawing.Image.FromStream(imgStream);
-                            dimens = ResizePicture(img.Width, img.Height, true);
+                            try
+                            {
+                                dimens = CalculateDimensions(SelectedImages[i].URL);
+                            }
+                            catch
+                            {
+                                _failedToLoadPicture = true;
+                                continue;
+                            }
                             switch (i)
                             {
                                 case 0:
                                     // first picure will be placed above the second, will use returned values without modifying them
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT, PICTURE_BOX_TOP,
-                                        Convert.ToSingle(dimens.Width),
-                                        Convert.ToSingle(dimens.Height)
-                                        );
+                                    AddPicture(slide, SelectedImages[i].URL, PICTURE_BOX_LEFT, PICTURE_BOX_TOP, dimens.Width, dimens.Height);
                                     runningWidth = Convert.ToSingle(dimens.Width);
                                     runningHeight = Convert.ToSingle(dimens.Height);
                                     break;
                                 case 1:
                                     // second picture will be placed to the right of the first, will add width of first to left value
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER,
-                                        PICTURE_BOX_TOP,
-                                        Convert.ToSingle(dimens.Width),
-                                        Convert.ToSingle(dimens.Height)
-                                        );
+                                    AddPicture(slide, SelectedImages[i].URL, PICTURE_BOX_LEFT + runningWidth + PICTURE_BUFFER, PICTURE_BOX_TOP, dimens.Width, dimens.Height);
                                     oldRunningWidth = runningWidth;
                                     runningWidth = Convert.ToSingle(dimens.Width);
                                     oldRunningHeight = runningHeight;
@@ -541,15 +557,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                                     break;
                                 case 2:
                                     // third picture will be placed below the first, will add height of the first to top value
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT,
-                                        PICTURE_BOX_TOP + oldRunningHeight + PICTURE_BUFFER,
-                                        Convert.ToSingle(dimens.Width),
-                                        Convert.ToSingle(dimens.Height)
-                                        );
+                                    AddPicture(slide, SelectedImages[i].URL, PICTURE_BOX_LEFT, PICTURE_BOX_TOP + oldRunningHeight + PICTURE_BUFFER, dimens.Width, dimens.Height);
                                     runningWidth = Convert.ToSingle(dimens.Width);
                                     break;
                                 case 3:
@@ -566,15 +574,7 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                                             widthShiftValue = runningWidth;
                                         }
                                     }
-                                    slide.Shapes.AddPicture(
-                                        SelectedImages[i].URL,
-                                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                                        PICTURE_BOX_LEFT + widthShiftValue + PICTURE_BUFFER,
-                                        PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER,
-                                        Convert.ToSingle(dimens.Width),
-                                        Convert.ToSingle(dimens.Height)
-                                        );
+                                    AddPicture(slide, SelectedImages[i].URL, PICTURE_BOX_LEFT + widthShiftValue + PICTURE_BUFFER, PICTURE_BOX_TOP + runningHeight + PICTURE_BUFFER, dimens.Width, dimens.Height);
                                     break;
                             }
                         }
@@ -582,16 +582,96 @@ namespace RiggsBurnham_PresentationMaker.ViewModels
                 }
                 // save new powerpoint
                 pptPresentation.SaveAs(saveFileDialog.FileName, PpSaveAsFileType.ppSaveAsDefault, MsoTriState.msoTrue);
+                //if (failedLoadingPicture == true)
+                //{
+                //    //FailedToLoadPictureError = new ErrorWindow(this, "Failed Loading a Picture", "A picture failed to load");
+                //    FailedToLoadPictureError.Show();
+                //}
             }
         }
 
         private void PerformSearch()
         {
-            List<string> titleString = Title.Split(' ').ToList();
-            List<string> descriptionString = Description.Split(' ').ToList();
+            List<string> titleString = _plainTextTitle.Split(' ').ToList();
+            List<string> descriptionString = _plainTextDescription.Split(' ').ToList();
             titleString.AddRange(descriptionString);
             GoogleImages.SearchGoogleImages(titleString);
             Images = LoadGoogleImages();
+        }
+
+        private List<CharacterStyle> ConvertRtfTextToCharacterStyles(string rtfText)
+        {
+            List<CharacterStyle> csList = new List<CharacterStyle>();
+
+            //_title = value;
+            var rtfParts = rtfText.Split('{', '}');
+            List<string> found = new List<string>();
+            foreach (var part in rtfParts)
+            {
+                if (part.Contains("\\ltrch"))
+                {
+                    found.Add(part);
+                }
+            }
+            //List<CharacterStyle> csList = new List<CharacterStyle>();
+            int i = 0;
+            bool isBold = false;
+            string word = "";
+            foreach (string styleWord in found)
+            {
+                if (styleWord.Contains("\\b\\ltrch"))
+                {
+                    isBold = true;
+                    word = styleWord.Remove(0, 9);
+                }
+                else
+                {
+                    word = styleWord.Remove(0, 7);
+                }
+                foreach (char character in word)
+                {
+                    CharacterStyle cs = new CharacterStyle();
+                    cs.Character = character;
+                    cs.IsBold = isBold;
+                    cs.Position = i;
+                    csList.Add(cs);
+                    ++i;
+                }
+                isBold = false;
+            }
+
+            return csList;
+        }
+
+        private void AddPicture(Slide slide, string url, float left, float top, double width, double height)
+        {
+            slide.Shapes.AddPicture(
+                url,
+                Microsoft.Office.Core.MsoTriState.msoFalse,
+                Microsoft.Office.Core.MsoTriState.msoTrue,
+                left, top,
+                Convert.ToSingle(width),
+                Convert.ToSingle(height)
+            );
+        }
+
+        private PictureDimensions CalculateDimensions(string url)
+        {
+            //try
+            //{
+                PictureDimensions dimens = new PictureDimensions();
+                byte[] imgData = new WebClient().DownloadData(url);
+                MemoryStream imgStream = new MemoryStream(imgData);
+                System.Drawing.Image img = System.Drawing.Image.FromStream(imgStream);
+                dimens = ResizePicture(img.Width, img.Height, false);
+                return dimens;
+            //}
+            //catch
+            //{
+            //    FailedToLoadPictureError = new ErrorWindow(this, "Failed Loading a Picture", "A picture failed to load");
+            //    FailedToLoadPictureError.Show();
+            //    throw;
+            //}
         }
         #endregion
     }

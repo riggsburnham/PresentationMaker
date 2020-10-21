@@ -1,4 +1,4 @@
-﻿<Window x:Class="RiggsBurnham_PresentationMaker.Views.TooManyPicturesErrorWindow"
+﻿<Window x:Class="RiggsBurnham_PresentationMaker.Views.ErrorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:RiggsBurnham_PresentationMaker.Views"
         mc:Ignorable="d"
         Background="#2B2A30"
-        Title="Error - Too many pictures" Height="175" Width="250">
+        Title="{Binding Path=ErrorTitle}" Height="175" Width="250">
     <Window.Resources>
         <Style TargetType="ScrollBar">
             <Setter Property="Opacity" Value="0.5"/>
@@ -33,7 +33,7 @@
             </Grid.RowDefinitions>
             <TextBlock Grid.Row="0"
                        Grid.RowSpan="2"
-                       Text="Can only add 4 pictures, please remove one before adding."
+                       Text="{Binding Path=ErrorDescription}"
                        TextWrapping="Wrap"
                        VerticalAlignment="Center"
                        HorizontalAlignment="Center"
