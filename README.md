@@ -9,4 +9,4 @@ To bold use the hot key ctrl + b
 
 To italic use the hot key ctrl + i
 
-To underline use the hot key ctrl + ul
+To underline use the hot key ctrl + u
