@@ -11,7 +11,7 @@ namespace GoogleLibrary
     {
         private string _searchParams;
         private const string GOOGLE_IMAGE_SEARCH_API_URI =
-            @"https://www.googleapis.com/customsearch/v1?key=AIzaSyBTwASr75UbGxxT9qSJJrOkVNxk3_1bOvI&cx=faa9aa8097b8b7a8d&q=";
+            @"https://www.googleapis.com/customsearch/v1?key=KEYGOESHERE_1bOvI&cx=SEARCHENGINEIDGOESHERE&q=";
 
         public GoogleImages()
         {
